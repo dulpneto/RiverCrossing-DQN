@@ -1,0 +1,4 @@
+numpy
+opencv-contrib-python
+gym
+tensorflow==2.9.2
