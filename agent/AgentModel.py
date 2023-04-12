@@ -14,34 +14,28 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # Types of agents implemented
 class AgentType:
-    QL_TARGET = 'QL_TARGET'
-    QL_TD = 'QL_TD'
-    QL_TARGET_LSE = 'QL_TARGET_LSE'
-    DQN_TARGET = 'DQN_TARGET'
-    DQN_TD = 'DQN_TD'
-    DQN_TARGET_LSE = 'DQN_TARGET_LSE'
-    DQN_TARGET_CACHE = 'DQN_TARGET_CACHE'
-    DQN_TD_CACHE = 'DQN_TD_CACHE'
-    DQN_TARGET_LSE_CACHE = 'DQN_TARGET_LSE_CACHE'
+    QL = 'QL'
+    DQN = 'DQN'
+    DQN_CACHED = 'DQN_CACHED'
+    DQN_SKIP = 'DQN_SKIP'
 
 
 # Agent default behaviour
 class AgentModel(ABC):
 
-    def __init__(self, env, alpha, gamma, lamb, bellman_type):
+    def __init__(self, env, alpha, gamma, lamb, bellman):
         self.env = env
         self.alpha = alpha
         self.gamma = gamma
         self.lamb = lamb
-        self.bellman_type = bellman_type
-        self.bellman = bu.BellmanUpdate.build(bellman_type, alpha, gamma, lamb)
+        self.bellman = bellman
         self.create_model()
 
-    def reset(self, alpha, gamma, lamb, bellman_type):
+    def reset(self, alpha, gamma, lamb):
         self.alpha = alpha
         self.gamma = gamma
         self.lamb = lamb
-        self.bellman = bu.BellmanUpdate.build(bellman_type, alpha, gamma, lamb)
+        self.bellman.reset()
 
     @abstractmethod
     def create_model(self):
@@ -68,25 +62,18 @@ class AgentModel(ABC):
         pass
 
     @staticmethod
-    def build(type, env, alpha, gamma, lamb):
-        if type == AgentType.QL_TARGET:
-            return QLearningModel(env, alpha, gamma, lamb, bu.Type.TARGET)
-        elif type == AgentType.QL_TD:
-            return QLearningModel(env, alpha, gamma, lamb, bu.Type.TD)
-        elif type == AgentType.QL_TARGET_LSE:
-            return QLearningModel(env, alpha, gamma, lamb, bu.Type.TARGET_LOG_SUM_EXP)
-        elif type == AgentType.DQN_TARGET:
-            return DQNModel(env, alpha, gamma, lamb, bu.Type.TARGET)
-        elif type == AgentType.DQN_TD:
-            return DQNModel(env, alpha, gamma, lamb, bu.Type.TD)
-        elif type == AgentType.DQN_TARGET_LSE:
-            return DQNModel(env, alpha, gamma, lamb, bu.Type.TARGET_LOG_SUM_EXP)
-        elif type == AgentType.DQN_TARGET_CACHE:
-            return DQNModelCached(env, alpha, gamma, lamb, bu.Type.TARGET)
-        elif type == AgentType.DQN_TD_CACHE:
-            return DQNModelCached(env, alpha, gamma, lamb, bu.Type.TD)
-        elif type == AgentType.DQN_TARGET_LSE_CACHE:
-            return DQNModelCached(env, alpha, gamma, lamb, bu.Type.TARGET_LOG_SUM_EXP)
+    def build(type, bellman_type, env, alpha, gamma, lamb):
+
+        bellman_update = bu.BellmanUpdate.build(bellman_type, alpha, gamma, lamb)
+
+        if type == AgentType.QL:
+            return QLearningModel(env, alpha, gamma, lamb, bellman_update)
+        elif type == AgentType.DQN:
+            return DQNModel(env, alpha, gamma, lamb, bellman_update)
+        elif type == AgentType.DQN_CACHED:
+            return DQNModelCached(env, alpha, gamma, lamb, bellman_update)
+        elif type == AgentType.DQN_CACHED:
+            return DQNSkipModelUsage(env, alpha, gamma, lamb, bellman_update)
         else:
             raise Exception("Not implemented {}".format(type))
         return
@@ -145,10 +132,10 @@ class DQNModel(AgentModel):
 
         current_states = np.array(
             [self.encode_observation(transition[0]) for transition in mini_batch])
-        current_qs_list = self.model.predict(current_states)
+        current_qs_list = self.model.predict(current_states, verbose=0)
         new_current_states = np.array(
             [self.encode_observation(transition[3]) for transition in mini_batch])
-        future_qs_list = target_model.model.predict(new_current_states)
+        future_qs_list = target_model.model.predict(new_current_states, verbose=0)
 
         x = []
         y = []
@@ -169,7 +156,7 @@ class DQNModel(AgentModel):
     def find_qs(self, state):
         encoded = self.encode_observation(state)
         encoded_reshaped = encoded.reshape([1, encoded.shape[0]])
-        predicted = self.model.predict(encoded_reshaped).flatten()
+        predicted = self.model.predict(encoded_reshaped, verbose=0).flatten()
 
         return predicted
 
@@ -182,11 +169,8 @@ class DQNModel(AgentModel):
         return encoded
 
 
-# DQN with Cache strategy to make testes go faster
+# DQN with Cache strategy to make tests go faster
 class DQNModelCached(DQNModel):
-
-    # when false skip using model - use only Q table but model is trained
-    MODEL_USAGE = True
 
     def update_model(self, mini_batch, target_model):
 
@@ -205,32 +189,25 @@ class DQNModelCached(DQNModel):
 
     def set_weights(self, model):
         # WITH MODEL USAGE
-        if self.MODEL_USAGE:
-            self.cached_q = False
-            self.model.set_weights(model.model.get_weights())
-        else:  # SKIP MODEL USAGE
-            if not model.cached_q:
-                self.Q = defaultdict(lambda: np.ones(self.env.action_space.n) * self.bellman.default_V)
-            else:
-                self.Q = model.Q
+        self.cached_q = False
+        self.model.set_weights(model.model.get_weights())
 
     def find_qs(self, state):
 
         # making a batch prediction to speed up tests
         if not self.cached_q:
             # WITH MODEL USAGE
-            if self.MODEL_USAGE:
-                x = [self.encode_observation(s) for s in range(self.env.observation_space.shape[0])]
-                prediction = self.model.predict(np.array(x), batch_size=len(x))
-                self.Q = [self.bellman.bellman_denormalize(qs) for qs in prediction]
-            else:  # SKIP MODEL USAGE
-                self.Q = defaultdict(lambda: np.ones(self.env.action_space.n) * self.bellman.default_V)
+            x = [self.encode_observation(s) for s in range(self.env.observation_space.shape[0])]
+            prediction = self.model.predict(np.array(x), batch_size=len(x), verbose=0)
+            self.Q = [self.bellman.bellman_denormalize(qs) for qs in prediction]
 
             self.cached_q = True
 
         return self.Q[state]
 
     def print_qs_model(self):
+
+        print('MODEL VALUES')
 
         h, w = self.env.shape
         lineState = ''
@@ -239,8 +216,30 @@ class DQNModelCached(DQNModel):
                 state = x + (y * w)
                 encoded = self.encode_observation(state)
                 encoded_reshaped = encoded.reshape([1, encoded.shape[0]])
-                q_s = self.model.predict(encoded_reshaped).flatten()
+                q_s = self.model.predict(encoded_reshaped, verbose=0).flatten()
                 lineState = '{}\t{}'.format(lineState, str(round(max(q_s), 3)))
             lineState = '{}\n'.format(lineState)
         print('')
         print(lineState)
+
+
+# DQN that skip using model - use only Q table but model is trained
+class DQNSkipModelUsage(DQNModelCached):
+
+    def set_weights(self, model):
+        # SKIP MODEL USAGE
+        if not model.cached_q:
+            self.Q = defaultdict(lambda: np.ones(self.env.action_space.n) * self.bellman.default_V)
+        else:
+            self.Q = model.Q
+
+    def find_qs(self, state):
+
+        # making a batch prediction to speed up tests
+        if not self.cached_q:
+            # SKIP MODEL USAGE
+            self.Q = defaultdict(lambda: np.ones(self.env.action_space.n) * self.bellman.default_V)
+
+            self.cached_q = True
+
+        return self.Q[state]

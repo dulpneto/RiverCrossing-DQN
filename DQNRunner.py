@@ -22,7 +22,8 @@ QUIET = False
 def run():
 
     parser = argparse.ArgumentParser(description='Run DQN for River Crossing domain.')
-    parser.add_argument('-t', '--type', type=float, default=0.0, help='The rtype of algorithm, default QL_TARGET_LSE.')
+    parser.add_argument('-t', '--type', default='QL', help='The type of algorithm QL,  DQN, DQN_CACHED, DQN_SKIP, default QL.')
+    parser.add_argument('-b', '--bellman_update', default='Target', help='The type of Bellman update Target, TD or LSE, default Target.')
     parser.add_argument('-l', '--lamb', type=float, default=0.0, help='The risk param, default to 0.0.')
     parser.add_argument('-g', '--gamma', type=float, default=0.99, help='The discount factor, default to 0.99.')
     parser.add_argument('-a', '--alpha', type=float, default=0.1, help='The learning rate, default to 0.1.')
@@ -32,7 +33,8 @@ def run():
     parser.add_argument('-sw', '--shape_w', type=int, default=4, help='he shape w size, default to 4.')
     args = parser.parse_args()
 
-    agent_type = ag.AgentType.QL_TARGET_LSE
+    agent_type = args.type
+    bellman_update = args.bellman_update
     alpha = args.alpha
     gamma = args.gamma
     lamb = args.lamb
@@ -48,11 +50,11 @@ def run():
 
     # 1. Initialize the Target and Main models
     # Main Model (updated every step)
-    model = ag.AgentModel.build(agent_type, env, alpha, gamma, lamb)
+    model = ag.AgentModel.build(agent_type, bellman_update, env, alpha, gamma, lamb)
     model.load_model()
 
     # Target Model (updated every 100 steps)
-    target_model = ag.AgentModel.build(agent_type, env, alpha, gamma, lamb)
+    target_model = ag.AgentModel.build(agent_type, bellman_update, env, alpha, gamma, lamb)
     target_model.set_weights(model)
 
     replay_memory = deque(maxlen=1_000)

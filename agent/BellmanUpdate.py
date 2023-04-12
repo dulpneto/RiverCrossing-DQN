@@ -5,9 +5,9 @@ import math
 
 
 class Type:
-    TARGET = 0
-    TD = 1
-    TARGET_LOG_SUM_EXP = 2
+    TARGET = 'Target'
+    TD = 'TD'
+    TARGET_LOG_SUM_EXP = 'LSE'
 
 
 class BellmanUpdate(ABC):
@@ -33,6 +33,9 @@ class BellmanUpdate(ABC):
         target = reward + (self.gamma * v)
         td = target - current_qs[action]
         return current_qs[action] + (self.alpha * td)
+
+    def reset(self):
+        self.default_V = self.init_default_v()
 
     @abstractmethod
     def bellman_update_risk(self, current_qs, future_qs, action, reward):
