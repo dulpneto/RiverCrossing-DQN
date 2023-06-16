@@ -172,6 +172,54 @@ class RiverCrossingEnv(gym.Env):
         plt.show()
 
     @staticmethod
+    def draw_img_state(shape, state):
+        h, w = shape
+
+        img_width = 5
+
+        fig = plt.figure(figsize=(img_width, img_width))
+        ax = fig.add_subplot(111, aspect='equal')
+
+        for y in range(h):
+            for x in range(w):
+                s = x + (y * w)
+
+                # By default, the (0, 0) coordinate in matplotlib is the bottom left corner,
+                # so we need to invert the y coordinate to plot the matrix correctly
+                matplot_x = x
+                matplot_y = h - y - 1
+
+                if x == w - 1 and y == h - 1:  # meta
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='gray'))
+                    # ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='+'))
+                elif x == 0:  # margem direita
+                    text = 'D'
+                elif x == w - 1:  # margem esquerda
+                    text = 'E'
+                elif y == 0:  # ponte
+                    text = 'B'
+                elif y == h - 1:  # cachoeira
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='xx'))
+                else:  # rio
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='..'))
+
+                if s == state:
+                    ax.add_patch(plt.Circle((matplot_x, matplot_y), 0.4, facecolor='black'))
+
+                # ax.annotate(str(s), xy=(matplot_x, matplot_y), ha='center', va='center')
+
+        offset = .5
+        ax.set_xlim(-offset, w - offset)
+        ax.set_ylim(-offset, h - offset)
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+
+        ax.hlines(y=np.arange(h + 1) - offset, xmin=-offset, xmax=w - offset, color='black')
+        ax.vlines(x=np.arange(w + 1) - offset, ymin=-offset, ymax=h - offset, color='black')
+
+        plt.savefig('environment/img/river_{}.png'.format(state))
+
+    @staticmethod
     def print_result(policy, V, steps, updates, shape, font_size=30):
         if steps > 0:
             print('\n Passos', steps)
