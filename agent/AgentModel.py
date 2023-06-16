@@ -7,6 +7,7 @@ import numpy as np
 from tensorflow import keras
 from copy import copy
 from collections import defaultdict
+from collections import deque
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -14,10 +15,16 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # Types of agents implemented
 class AgentType:
+    # Q-Learning
     QL = 'QL'
+    # Deep QNetwork
     DQN = 'DQN'
     DQN_CACHED = 'DQN_CACHED'
     DQN_SKIP = 'DQN_SKIP'
+    # Deep QNetwork with convolutional network to handle states as images
+    DQN_CONV = 'DQN_CONV'
+    DQN_CONV_CACHED = 'DQN_CONV_CACHED'
+    DQN_CONV_SKIP = 'DQN_CONV_SKIP'
 
 
 # Agent default behaviour
@@ -72,8 +79,14 @@ class AgentModel(ABC):
             return DQNModel(env, alpha, gamma, lamb, bellman_update)
         elif type == AgentType.DQN_CACHED:
             return DQNModelCached(env, alpha, gamma, lamb, bellman_update)
-        elif type == AgentType.DQN_CACHED:
+        elif type == AgentType.DQN_SKIP:
             return DQNSkipModelUsage(env, alpha, gamma, lamb, bellman_update)
+        elif type == AgentType.DQN_CONV:
+            return DQNConvModel(env, alpha, gamma, lamb, bellman_update)
+        elif type == AgentType.DQN_CONV_CACHED:
+            return DQNConvModelCached(env, alpha, gamma, lamb, bellman_update)
+        elif type == AgentType.DQN_CONV_SKIP:
+            return DQNConvSkipModelUsage(env, alpha, gamma, lamb, bellman_update)
         else:
             raise Exception("Not implemented {}".format(type))
         return
@@ -120,7 +133,7 @@ class DQNModel(AgentModel):
         self.model.add(keras.layers.Dense(12, activation='relu', kernel_initializer=init))
         self.model.add(keras.layers.Dense(action_shape, activation='linear', kernel_initializer=init))
         self.model.compile(loss=tf.keras.losses.Huber(),
-                           optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), metrics=['accuracy'])
+                           optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), metrics=['accuracy'])
 
         self.cached_q = False
 
@@ -169,7 +182,7 @@ class DQNModel(AgentModel):
         return encoded
 
 
-# DQN with Cache strategy to make tests go faster
+# DQN with Cache strategy to make tests run faster
 class DQNModelCached(DQNModel):
 
     def update_model(self, mini_batch, target_model):
@@ -243,3 +256,116 @@ class DQNSkipModelUsage(DQNModelCached):
             self.cached_q = True
 
         return self.Q[state]
+
+
+# DQN with convolutional network to handle states as images
+class DQNConvModel(DQNModel):
+
+    def create_model(self):
+        # keep a sing image on stack since we are not working object velocity
+        self.frame_stack_num = 1
+
+        action_shape = self.env.action_space.n
+
+        # Neural Net for Deep-Q learning Model
+        self.model = keras.Sequential()
+        self.model.add(keras.layers.Conv2D(filters=6, kernel_size=(7, 7), strides=3, activation='relu',
+                         input_shape=(self.env.state_img_width, self.env.state_img_width, self.frame_stack_num)))
+        self.model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(keras.layers.Conv2D(filters=12, kernel_size=(4, 4), activation='relu'))
+        self.model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(keras.layers.Flatten())
+        self.model.add(keras.layers.Dense(216, activation='relu'))
+        self.model.add(keras.layers.Dense(action_shape, activation=None))
+        self.model.compile(loss='mean_squared_error',
+                           optimizer=tf.keras.optimizers.Adam(learning_rate=0.001, epsilon=1e-7))
+
+        self.cached_q = False
+
+    def find_qs(self, state):
+        encoded = self.encode_observation(state)
+        predicted = self.model.predict(np.expand_dims(encoded, axis=0), verbose=0).flatten()
+        return predicted
+
+    def encode_observation(self, state):
+        frame_stack = deque([state]*self.frame_stack_num, maxlen=self.frame_stack_num)
+        return np.transpose(frame_stack, (1, 2, 0))
+
+# DQN with convolutional network and with Cache strategy to make tests run faster
+class DQNConvModelCached(DQNConvModel):
+
+    def update_model(self, mini_batch, target_model):
+
+        for index, (current_state, action, reward, next_state, done) in enumerate(mini_batch):
+            future_qs = target_model.find_qs(next_state)
+            current_qs = self.find_qs(current_state)
+
+            current_state_idx = self.env.find_s_from_img(current_state)
+            self.Q[current_state_idx][action] = self.bellman.bellman_update(current_qs, future_qs, action, reward)
+
+        x = [self.encode_observation(self.env.state_img_cache[s]) for s in range(self.env.observation_space.shape[0])]
+        y = [self.bellman.bellman_normalize(self.Q[s]) for s in range(self.env.observation_space.shape[0])]
+
+        self.model.fit(np.array(x), np.array(y), batch_size=len(mini_batch), verbose=0, shuffle=True)
+
+        # marking cache to be refreshed
+        # self.cached_q = False
+
+    def set_weights(self, model):
+        # WITH MODEL USAGE
+        self.cached_q = False
+        self.model.set_weights(model.model.get_weights())
+
+    def find_qs(self, state):
+
+        # making a batch prediction to speed up tests
+        if not self.cached_q:
+            # WITH MODEL USAGE
+            x = [self.encode_observation(self.env.state_img_cache[s]) for s in range(self.env.observation_space.shape[0])]
+            prediction = self.model.predict(np.array(x), batch_size=len(x), verbose=0)
+            self.Q = [self.bellman.bellman_denormalize(qs) for qs in prediction]
+
+            self.cached_q = True
+
+        state_idx = self.env.find_s_from_img(state)
+        return self.Q[state_idx]
+
+    def print_qs_model(self):
+
+        print('MODEL VALUES')
+
+        h, w = self.env.shape
+        lineState = ''
+        for y in range(h):
+            for x in range(w):
+                state = x + (y * w)
+                state_img = self.env.state_img_cache[state]
+                encoded = self.encode_observation(state_img)
+                q_s = self.model.predict(np.expand_dims(encoded, axis=0), verbose=0).flatten()
+                lineState = '{}\t{}'.format(lineState, str(round(max(q_s), 3)))
+            lineState = '{}\n'.format(lineState)
+        print('')
+        print(lineState)
+
+
+# DQN that skip using model - use only Q table but model is trained
+class DQNConvSkipModelUsage(DQNConvModelCached):
+
+    def set_weights(self, model):
+        # SKIP MODEL USAGE
+        if not model.cached_q:
+            self.Q = defaultdict(lambda: np.ones(self.env.action_space.n) * self.bellman.default_V)
+        else:
+            self.Q = model.Q
+
+    def find_qs(self, state):
+
+        # making a batch prediction to speed up tests
+        if not self.cached_q:
+            # SKIP MODEL USAGE
+            self.Q = defaultdict(lambda: np.ones(self.env.action_space.n) * self.bellman.default_V)
+
+            self.cached_q = True
+
+        state_idx = self.env.find_s_from_img(state)
+        return self.Q[state_idx]

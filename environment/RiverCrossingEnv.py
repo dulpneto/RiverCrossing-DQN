@@ -3,16 +3,19 @@ from gym import spaces
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import cv2
 
 # number of action - North, South, East, West
 N_DISCRETE_ACTIONS = 4
+
+STATE_IMG_WIDTH = 500
 
 
 class RiverCrossingEnv(gym.Env):
     """Custom Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, shape, stuck=False, s0=None):
+    def __init__(self, shape, state_as_img=False, s0=None):
         # super(RiverCrossingEnv, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
@@ -23,6 +26,12 @@ class RiverCrossingEnv(gym.Env):
 
         # self.observation_space = spaces.Discrete(w * h)
         self.observation_space = spaces.Box(low=0, high=1, shape=(w * h,))
+
+        # when setting state as ima env return a plot of the state instead of the state number
+        self.state_as_img = state_as_img
+        # creating a cache to keep formatted images. This will make faster to run
+        self.state_img_cache = {}
+        self.state_img_width = STATE_IMG_WIDTH
 
         # probabilities - (state,action)[(state_next, probability,reward),...]
         self.P = {}
@@ -44,8 +53,14 @@ class RiverCrossingEnv(gym.Env):
 
         for y in range(h):
             for x in range(w):
+                s = x + (y * w)
+                if self.state_as_img:
+                    img = RiverCrossingEnv.draw_img_state(shape, s)
+                    state_img = RiverCrossingEnv.process_state_image(img)
+                    self.state_img_cache[s] = state_img
+
                 for a in range(N_DISCRETE_ACTIONS):
-                    s = x + (y * w)
+
                     s_next = RiverCrossingEnv.find_s_next(x, y, a, shape)
 
                     default_reward = -1
@@ -108,16 +123,31 @@ class RiverCrossingEnv(gym.Env):
             if random_number <= t_sum:
                 self.current_s = s_next
                 done = (s_next in self.G)
+
+                if self.state_as_img:
+                    return self.state_img_cache[s_next], r, done, {}
                 return s_next, r, done, {}
 
     def reset(self):
         # Reset the state of the environment to an initial state
         self.current_s = self.s0
+        if self.state_as_img:
+            return self.state_img_cache[self.current_s]
         return self.current_s
 
     def render(self, mode='human', close=False):
         # Render the environment to the screen
+        if self.state_as_img:
+            return self.state_img_cache[self.current_s]
         return self.current_s
+
+    def find_s_from_img(self, state_img):
+        h, w = self.shape
+        for y in range(h):
+            for x in range(w):
+                s = x + (y * w)
+                if (self.state_img_cache[s] == state_img).all():
+                    return s
 
     @staticmethod
     def draw_policy(V, policy, shape, font_size, plot_value=False):
@@ -175,7 +205,8 @@ class RiverCrossingEnv(gym.Env):
     def draw_img_state(shape, state):
         h, w = shape
 
-        img_width = 5
+        # adjusting image size to mat plot
+        img_width = STATE_IMG_WIDTH/100
 
         fig = plt.figure(figsize=(img_width, img_width))
         ax = fig.add_subplot(111, aspect='equal')
@@ -218,6 +249,14 @@ class RiverCrossingEnv(gym.Env):
         ax.vlines(x=np.arange(w + 1) - offset, ymin=-offset, ymax=h - offset, color='black')
 
         plt.savefig('environment/img/river_{}.png'.format(state))
+        return cv2.imread('environment/img/river_{}.png'.format(state))
+
+    @staticmethod
+    def process_state_image(image):
+        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image_gray = image_gray.astype(float)
+        image_gray /= 255.0
+        return image_gray
 
     @staticmethod
     def print_result(policy, V, steps, updates, shape, font_size=30):
@@ -275,7 +314,10 @@ class RiverCrossingEnv(gym.Env):
         for y in range(h):
             for x in range(w):
                 state = x + (y * w)
-                q_s = model.find_qs(state)
+                if self.state_as_img:
+                    q_s = model.find_qs(self.state_img_cache[state])
+                else:
+                    q_s = model.find_qs(state)
                 action = np.argmax(q_s)
                 lineState = '{}\t{}'.format(lineState, str(round(max(q_s), 3)))
                 act = 'L'

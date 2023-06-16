@@ -22,7 +22,7 @@ QUIET = False
 def run():
 
     parser = argparse.ArgumentParser(description='Run DQN for River Crossing domain.')
-    parser.add_argument('-t', '--type', default='QL', help='The type of algorithm QL,  DQN, DQN_CACHED, DQN_SKIP, default QL.')
+    parser.add_argument('-t', '--type', default='QL', help='The type of algorithm QL, DQN, DQN_CONV, DQN_CACHED, DQN_CONV_CACHED, DQN_SKIP, DQN_CONV_SKIP, default QL.')
     parser.add_argument('-b', '--bellman_update', default='Target', help='The type of Bellman update Target, TD or LSE, default Target.')
     parser.add_argument('-l', '--lamb', type=float, default=0.0, help='The risk param, default to 0.0.')
     parser.add_argument('-g', '--gamma', type=float, default=0.99, help='The discount factor, default to 0.99.')
@@ -44,9 +44,12 @@ def run():
     # An episode a full game
     train_episodes = args.episodes
 
+    # if we are working with convolutional network we must return stats as images
+    state_as_img = agent_type.startswith('DQN_CONV')
+
     # Building environment
     shape = (args.shape_h, args.shape_w)
-    env = RiverCrossingEnv(shape)
+    env = RiverCrossingEnv(shape, state_as_img=state_as_img)
 
     # 1. Initialize the Target and Main models
     # Main Model (updated every step)
