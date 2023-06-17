@@ -46,7 +46,7 @@ def run():
         # if we are working with convolutional network we must return stats as images
         env.state_as_img = agent_type.startswith('DQN_CONV')
 
-        samples = 3
+        samples = 20
         for sample in range(1, samples+1):
 
             # 1. Initialize the Target and Main models
