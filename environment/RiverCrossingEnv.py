@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import cv2
+import os
 
 # number of action - North, South, East, West
 N_DISCRETE_ACTIONS = 4
@@ -248,6 +249,9 @@ class RiverCrossingEnv(gym.Env):
         ax.hlines(y=np.arange(h + 1) - offset, xmin=-offset, xmax=w - offset, color='black')
         ax.vlines(x=np.arange(w + 1) - offset, ymin=-offset, ymax=h - offset, color='black')
 
+        if not os.path.exists('environment/img'):
+            os.makedirs('environment/img')
+            
         plt.savefig('environment/img/river_{}.png'.format(state))
         plt.close()
         return cv2.imread('environment/img/river_{}.png'.format(state))
