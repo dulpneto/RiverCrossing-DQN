@@ -60,6 +60,8 @@ def run():
 
             steps_to_update_target_model = 0
 
+            epsilon_decay = 1.0
+
             for episode in range(1, train_episodes+1):
                 total_training_rewards = 0
                 state = env.reset()
@@ -69,13 +71,18 @@ def run():
 
                     # 2. Explore using the Epsilon Greedy Exploration Strategy
                     random_number = np.random.rand()
-                    if random_number <= epsilon:
+                    if random_number <= epsilon_decay:
                         # Explore
                         action = env.action_space.sample()
                     else:
                         # Exploit best known action
                         predicted = model.find_qs(state)
                         action = np.argmax(predicted)
+
+                    # Epsilon decay to make learning faster
+                    epsilon_decay -= 0.1
+                    if epsilon_decay < epsilon:
+                        epsilon_decay = epsilon
 
                     # step
                     new_state, reward, done, info = env.step(action)

@@ -251,7 +251,7 @@ class RiverCrossingEnv(gym.Env):
 
         if not os.path.exists('environment/img'):
             os.makedirs('environment/img')
-            
+
         plt.savefig('environment/img/river_{}.png'.format(state))
         plt.close()
         return cv2.imread('environment/img/river_{}.png'.format(state))
