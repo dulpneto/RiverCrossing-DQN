@@ -37,6 +37,10 @@ class RiverCrossingEnv(gym.Env):
         # probabilities - (state,action)[(state_next, probability,reward),...]
         self.P = {}
 
+        # Action to be executed on a safe policy
+        # River states try to go to right margin
+        self.STEP_SAFE_POLICY = RiverCrossingEnv.init_step_safe_policy(shape)
+
         # terminals
         self.G = []
         self.G.append(h * w - 1)
@@ -90,6 +94,28 @@ class RiverCrossingEnv(gym.Env):
                         self.P[(s, a)] = [(s_next, 0.75, reward), (s + w, 0.25, default_reward)]
 
     @staticmethod
+    def init_step_safe_policy(shape):
+        step_safe_policy = {}
+        h, w = shape
+        for y in range(h):
+            for x in range(w):
+                s = x + (y * w)
+                # 0 North, 1 South,  2 East, 3 West
+                if x == w - 1 and y == h - 1:  # meta
+                    step_safe_policy[s] = 1
+                elif x == w - 1:  # margem direita
+                    step_safe_policy[s] = 1
+                elif y == 0:  # ponte
+                    step_safe_policy[s] = 2
+                elif x == 0:  # margem esquerda
+                    step_safe_policy[s] = 0
+                elif y == h - 1:  # cachoeira
+                    step_safe_policy[s] = 2
+                else:  # rio
+                    step_safe_policy[s] = 2
+        return step_safe_policy
+
+    @staticmethod
     def find_s_next(x, y, a, shape):
         h, w = shape
         s = x + (y * w)
@@ -128,6 +154,11 @@ class RiverCrossingEnv(gym.Env):
                 if self.state_as_img:
                     return self.state_img_cache[s_next], r, done, {}
                 return s_next, r, done, {}
+
+    def step_safe(self):
+        # get an action from a default step safe policy
+        action = self.STEP_SAFE_POLICY[self.current_s]
+        return self.step(action)
 
     def reset(self):
         # Reset the state of the environment to an initial state

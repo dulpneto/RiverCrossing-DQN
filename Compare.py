@@ -16,6 +16,10 @@ RANDOM_SEED = 5
 tf.random.set_seed(RANDOM_SEED)
 np.random.seed(RANDOM_SEED)
 
+# minimum rewards allowed while training
+# this is done to avoid being stuck
+MIN_TRAIN_REWARDS = -5000
+
 def log(txt, lamb):
     with open('./result{}.log'.format(lamb), 'a') as f:
         f.write(txt + '\n')
@@ -87,7 +91,10 @@ def run():
                         epsilon_decay = epsilon
 
                     # step
-                    new_state, reward, done, info = env.step(action)
+                    if total_training_rewards < MIN_TRAIN_REWARDS:
+                        new_state, reward, done, info = env.step_safe()
+                    else:
+                        new_state, reward, done, info = env.step(action)
 
                     # keeping replay memory to batch training
                     replay_memory.append([state, action, reward, new_state, done])
@@ -106,8 +113,6 @@ def run():
                         target_model.set_weights(model)
                         steps_to_update_target_model = 0
                         break
-
-
 
 
 def train(replay_memory, model, target_model):
