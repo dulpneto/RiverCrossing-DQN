@@ -8,7 +8,7 @@ import cv2
 # number of action - North, South, East, West
 N_DISCRETE_ACTIONS = 4
 
-STATE_IMG_WIDTH = 500
+STATE_IMG_WIDTH = 100
 
 
 class RiverCrossingEnv(gym.Env):
@@ -86,7 +86,7 @@ class RiverCrossingEnv(gym.Env):
                         self.P[(s, a)] = [(self.s0, 1, default_reward)]  # always returns to s0
                         # P[(s, a)] = [(0, 0.999, default_reward),(s, 0.001, default_reward)]#may returns to s0
                     else:  # rio
-                        self.P[(s, a)] = [(s_next, 0.8, reward), (s + w, 0.2, default_reward)]
+                        self.P[(s, a)] = [(s_next, 0.75, reward), (s + w, 0.25, default_reward)]
 
     @staticmethod
     def find_s_next(x, y, a, shape):
@@ -230,9 +230,9 @@ class RiverCrossingEnv(gym.Env):
                 elif y == 0:  # ponte
                     text = 'B'
                 elif y == h - 1:  # cachoeira
-                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='xx'))
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='xxxxxx'))
                 else:  # rio
-                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='..'))
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='......'))
 
                 if s == state:
                     ax.add_patch(plt.Circle((matplot_x, matplot_y), 0.4, facecolor='black'))
@@ -249,6 +249,7 @@ class RiverCrossingEnv(gym.Env):
         ax.vlines(x=np.arange(w + 1) - offset, ymin=-offset, ymax=h - offset, color='black')
 
         plt.savefig('environment/img/river_{}.png'.format(state))
+        plt.close()
         return cv2.imread('environment/img/river_{}.png'.format(state))
 
     @staticmethod

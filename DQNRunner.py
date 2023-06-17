@@ -28,9 +28,9 @@ def run():
     parser.add_argument('-g', '--gamma', type=float, default=0.99, help='The discount factor, default to 0.99.')
     parser.add_argument('-a', '--alpha', type=float, default=0.1, help='The learning rate, default to 0.1.')
     parser.add_argument('-p', '--epsilon', type=float, default=0.3, help='The epsilon, default to 0.3.')
-    parser.add_argument('-e', '--episodes', type=int, default=150, help='The numer of episodes, default to 150.')
-    parser.add_argument('-sh', '--shape_h', type=int, default=5, help='The shape h size, default to 5.')
-    parser.add_argument('-sw', '--shape_w', type=int, default=4, help='he shape w size, default to 4.')
+    parser.add_argument('-e', '--episodes', type=int, default=300, help='The numer of episodes, default to 150.')
+    parser.add_argument('-sh', '--shape_h', type=int, default=10, help='The shape h size, default to 5.')
+    parser.add_argument('-sw', '--shape_w', type=int, default=10, help='he shape w size, default to 4.')
     args = parser.parse_args()
 
     agent_type = args.type

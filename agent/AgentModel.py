@@ -68,6 +68,25 @@ class AgentModel(ABC):
     def print_qs_model(self):
         pass
 
+    def find_safe_points(self):
+        count = 0
+        h, w = self.env.shape
+        for state in range((h * w) - 1, -1, -1):
+            h, w = self.env.shape
+            x = int(state % w)
+
+            if self.env.state_as_img:
+                state_formated = self.env.state_img_cache[state]
+            else:
+                state_formated = state
+
+            if x == 0:
+                if np.argmax(self.find_qs(state_formated)) == 0:
+                    count += 1
+                else:
+                    return count
+        return count
+
     @staticmethod
     def build(type, bellman_type, env, alpha, gamma, lamb):
 
