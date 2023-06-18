@@ -25,11 +25,11 @@ QUIET = True
 def main():
     # Building environment
     shape = (10, 10)
-    #env = RiverCrossingEnv(shape, state_as_img=True)
+    env = RiverCrossingEnv(shape, state_as_img=False)
 
     #print(env.reset())
 
-    RiverCrossingEnv.draw_img_state(shape, 8)
+    RiverCrossingEnv.draw_img_state(shape, policy=env.STEP_SAFE_POLICY)
 
     gamma = 0.99
     lamb = -1

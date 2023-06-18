@@ -9,7 +9,7 @@ import os
 # number of action - North, South, East, West
 N_DISCRETE_ACTIONS = 4
 
-STATE_IMG_WIDTH = 100
+STATE_IMG_WIDTH = 500
 
 
 class RiverCrossingEnv(gym.Env):
@@ -234,7 +234,7 @@ class RiverCrossingEnv(gym.Env):
         plt.show()
 
     @staticmethod
-    def draw_img_state(shape, state):
+    def draw_img_state(shape, state=-1, policy=[]):
         h, w = shape
 
         # adjusting image size to mat plot
@@ -242,6 +242,12 @@ class RiverCrossingEnv(gym.Env):
 
         fig = plt.figure(figsize=(img_width, img_width))
         ax = fig.add_subplot(111, aspect='equal')
+
+        a2uv = {0.0: (0, -1),  # north
+                1.0: (0, 1),  # south
+                2.0: (1, 0),  # east
+                3.0: (-1, 0)  # west
+                }
 
         for y in range(h):
             for x in range(w):
@@ -262,11 +268,22 @@ class RiverCrossingEnv(gym.Env):
                 elif y == 0:  # ponte
                     text = 'B'
                 elif y == h - 1:  # cachoeira
-                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='xxxxxx'))
+                    hatch = 'xxxxxx'
+                    if img_width >= 5:
+                        hatch='xx'
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch=hatch))
                 else:  # rio
-                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='......'))
+                    hatch = '......'
+                    if img_width >= 5:
+                        hatch = '..'
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch=hatch))
 
-                if s == state:
+                # policy was given, must draw arrows
+                if len(policy) > 0:
+                    action = policy[s]
+                    u, v = a2uv[action]
+                    ax.arrow(matplot_x - (u * .4), matplot_y + (v * .4), u * .4, -v * .4, color='red', head_width=0.4, head_length=0.4)
+                elif s == state:
                     ax.add_patch(plt.Circle((matplot_x, matplot_y), 0.4, facecolor='black'))
 
                 # ax.annotate(str(s), xy=(matplot_x, matplot_y), ha='center', va='center')
@@ -282,6 +299,9 @@ class RiverCrossingEnv(gym.Env):
 
         if not os.path.exists('environment/img'):
             os.makedirs('environment/img')
+
+        if state < 0:
+            state = 'policy'
 
         plt.savefig('environment/img/river_{}.png'.format(state))
         plt.close()
