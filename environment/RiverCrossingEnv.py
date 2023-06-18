@@ -5,18 +5,16 @@ import numpy as np
 import random
 import cv2
 import os
+import warnings
 
 # number of action - North, South, East, West
 N_DISCRETE_ACTIONS = 4
-
-STATE_IMG_WIDTH = 500
-
 
 class RiverCrossingEnv(gym.Env):
     """Custom Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, shape, state_as_img=False, s0=None):
+    def __init__(self, shape, state_as_img=False, state_img_width=100, s0=None):
         # super(RiverCrossingEnv, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
@@ -32,14 +30,14 @@ class RiverCrossingEnv(gym.Env):
         self.state_as_img = state_as_img
         # creating a cache to keep formatted images. This will make faster to run
         self.state_img_cache = {}
-        self.state_img_width = STATE_IMG_WIDTH
+        self.state_img_width = state_img_width
 
         # probabilities - (state,action)[(state_next, probability,reward),...]
         self.P = {}
 
         # Action to be executed on a safe policy
         # River states try to go to right margin
-        self.STEP_SAFE_POLICY = RiverCrossingEnv.init_step_safe_policy(shape)
+        self.safe_policy = RiverCrossingEnv.init_step_safe_policy(shape)
 
         # terminals
         self.G = []
@@ -60,7 +58,7 @@ class RiverCrossingEnv(gym.Env):
             for x in range(w):
                 s = x + (y * w)
                 if self.state_as_img:
-                    img = RiverCrossingEnv.draw_img_state(shape, s)
+                    img = RiverCrossingEnv.draw_img_state(shape, self.state_img_width, s)
                     state_img = RiverCrossingEnv.process_state_image(img)
                     self.state_img_cache[s] = state_img
 
@@ -157,7 +155,7 @@ class RiverCrossingEnv(gym.Env):
 
     def step_safe(self):
         # get an action from a default step safe policy
-        action = self.STEP_SAFE_POLICY[self.current_s]
+        action = self.safe_policy[self.current_s]
         return self.step(action)
 
     def reset(self):
@@ -234,11 +232,11 @@ class RiverCrossingEnv(gym.Env):
         plt.show()
 
     @staticmethod
-    def draw_img_state(shape, state=-1, policy=[]):
+    def draw_img_state(shape, state_img_width, state=-1, policy=[]):
         h, w = shape
 
         # adjusting image size to mat plot
-        img_width = STATE_IMG_WIDTH/100
+        img_width = state_img_width/100
 
         fig = plt.figure(figsize=(img_width, img_width))
         ax = fig.add_subplot(111, aspect='equal')

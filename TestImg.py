@@ -29,7 +29,7 @@ def main():
 
     #print(env.reset())
 
-    RiverCrossingEnv.draw_img_state(shape, policy=env.STEP_SAFE_POLICY)
+    RiverCrossingEnv.draw_img_state(shape, policy=env.safe_policy, state_img_width=500)
 
     gamma = 0.99
     lamb = -1
