@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-import argparse
+import os
 
 from collections import deque
 import timeit
@@ -21,12 +21,15 @@ np.random.seed(RANDOM_SEED)
 MIN_TRAIN_REWARDS = -5000
 
 def log(txt, type, gamma):
-    with open('./final_result_ql_{}_gamma_{}.log'.format(type, gamma), 'a') as f:
+    with open('./logs/ql/result_ql_{}_gamma_{}.log'.format(type, gamma), 'a') as f:
         f.write(txt + '\n')
     print(txt)
 
 
 def run():
+
+    if not os.path.exists('logs/ql'):
+        os.makedirs('logs/ql')
 
     bellman_update = 'LSE'
     alpha = 0.1

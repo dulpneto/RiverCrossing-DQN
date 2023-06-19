@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import os
 
 import argparse
 
@@ -21,7 +22,7 @@ np.random.seed(RANDOM_SEED)
 MIN_TRAIN_REWARDS = -5000
 
 def log(txt, lamb):
-    with open('./result{}.log'.format(lamb), 'a') as f:
+    with open('./logs/train_3_models/result{}.log'.format(lamb), 'a') as f:
         f.write(txt + '\n')
     print(txt)
 
@@ -30,6 +31,9 @@ def run():
     parser = argparse.ArgumentParser(description='Run DQN for River Crossing domain.')
     parser.add_argument('-l', '--lamb', type=float, default=0.0, help='The risk param, default to 0.0.')
     args = parser.parse_args()
+
+    if not os.path.exists('logs/train_3_models'):
+        os.makedirs('logs/train_3_models')
 
     bellman_update = 'LSE'
     alpha = 0.1

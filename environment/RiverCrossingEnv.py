@@ -5,7 +5,6 @@ import numpy as np
 import random
 import cv2
 import os
-import warnings
 
 # number of action - North, South, East, West
 N_DISCRETE_ACTIONS = 4
