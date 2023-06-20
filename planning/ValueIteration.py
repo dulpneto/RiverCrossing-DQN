@@ -22,11 +22,17 @@ class ValueIteration:
                 q_updates = 0
                 for a in range(env.action_space.n):
                     for s_next, t, r in env.P[(s, a)]:
-                        q[a] += t * (np.sign(lamb) * np.exp(lamb * (r + gamma * V[s_next])))
+                        if lamb == 0:
+                            q[a] += t * (r + gamma * V[s_next])
+                        else:
+                            q[a] += t * (np.sign(lamb) * np.exp(lamb * (r + gamma * V[s_next])))
 
                     q_updates += 1
 
-                V[s] = (np.log(np.sign(lamb) * max(q)) / lamb)
+                if lamb == 0:
+                    V[s] = max(q)
+                else:
+                    V[s] = (np.log(np.sign(lamb) * max(q)) / lamb)
 
                 policy[s] = np.argmax(q)
                 updates += q_updates
@@ -36,3 +42,18 @@ class ValueIteration:
             if np.max(np.fabs(prev_V - V)) < epsilon:
                 break
         return policy, V, steps, updates, diffs, V_history
+
+
+    @staticmethod
+    def find_safe_points(env, policy):
+        count = 0
+        h, w = env.shape
+        for state in range((h * w) - 1, -1, -1):
+            x = int(state % w)
+
+            if x == 0:
+                if policy[state] == 0:
+                    count += 1
+                else:
+                    return count
+        return count

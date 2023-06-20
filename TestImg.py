@@ -29,12 +29,15 @@ def main():
 
     #print(env.reset())
 
-    RiverCrossingEnv.draw_img_state(shape, policy=env.safe_policy, state_img_width=500)
-
+    #RiverCrossingEnv.draw_img_state(shape, policy=env.safe_policy, state_img_width=500)
+    data = ''
     gamma = 0.99
-    lamb = -1
+    for lamb in [-1.0, -0.5, -0.2, -0.1, 0.0, 0.1, 0.2, 0.5, 1.0]:
+        policy, v, steps, updates, diffs, v_history = ValueIteration.run(env, lamb, gamma)
+        safe_points = ValueIteration.find_safe_points(env, policy)
+        data+='{},'.format(safe_points)
 
-    #policy, v, steps, updates, diffs, v_history = ValueIteration.run(env, lamb, gamma)
+    print(data)
 
     h, w = shape
     for y in range(h):
