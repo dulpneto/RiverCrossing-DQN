@@ -25,7 +25,7 @@ QUIET = True
 def main():
     # Building environment
     shape = (10, 10)
-    env = RiverCrossingEnv(shape, state_as_img=False)
+    env = RiverCrossingEnv(shape, state_as_img=True, state_img_width=500)
 
     #print(env.reset())
 
