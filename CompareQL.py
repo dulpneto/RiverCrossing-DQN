@@ -52,7 +52,7 @@ def run():
 
     h, w = env.shape
 
-    for lamb in [-1.0, -0.75, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0]:
+    for lamb in [-5.0, -2.0, -1.0, -0.75, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 2.0, 5.0]:
     #for lamb in [0.0]:
         # if we are working with convolutional network we must return stats as images
         env.state_as_img = agent_type.startswith('DQN_CONV')
