@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import argparse
 
 import os
 
@@ -27,11 +28,14 @@ def log(txt, bellman_update, type, gamma):
 
 
 def run():
+    parser = argparse.ArgumentParser(description='Run QL for River Crossing domain.')
+    parser.add_argument('-b', '--bellman_update', default='Target', help='The type of Bellman update Target, TD or LSE, default Target.')
+    args = parser.parse_args()
 
     if not os.path.exists('logs/ql'):
         os.makedirs('logs/ql')
 
-    bellman_update = 'LSE'
+    bellman_update = args.bellman_update
     alpha = 0.1
     gamma = 0.99
 
