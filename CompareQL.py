@@ -20,8 +20,8 @@ np.random.seed(RANDOM_SEED)
 # this is done to avoid being stuck
 MIN_TRAIN_REWARDS = -5000
 
-def log(txt, type, gamma):
-    with open('./logs/ql/result_ql_{}_gamma_{}.log'.format(type, gamma), 'a') as f:
+def log(txt, bellman_update, type, gamma):
+    with open('./logs/ql/result_ql_bellman_update_{}_gamma_{}.log'.format(bellman_update, type, gamma), 'a') as f:
         f.write(txt + '\n')
     print(txt)
 
@@ -33,9 +33,9 @@ def run():
 
     bellman_update = 'LSE'
     alpha = 0.1
-    gamma = 0.95
+    gamma = 0.99
 
-    epsilon = 0.3  # Epsilon-greedy algorithm in initialized at 1 meaning every step is random at the start
+    epsilon = 0.1  # Epsilon-greedy algorithm in initialized at 1 meaning every step is random at the start
 
     # An episode a full game
     train_episodes = 300
@@ -118,7 +118,7 @@ def run():
 
                     if done:
                         safe_points = model.find_safe_points()
-                        log('{},{},{},{},{}'.format(lamb, sample, episode, total_training_rewards, safe_points), 'train', gamma)
+                        log('{},{},{},{},{}'.format(lamb, sample, episode, total_training_rewards, safe_points), bellman_update, 'train', gamma)
 
                         target_model.set_weights(model)
                         steps_to_update_target_model = 0
@@ -139,10 +139,10 @@ def run():
                 a = np.argmax(np.bincount(policy_stack[s]))
                 policy[s] = a
         print('policy', policy)
-        run_model(env, policy, lamb, gamma)
+        run_model(env, policy, lamb, gamma, bellman_update)
 
 
-def run_model(env, policy, lamb, gamma):
+def run_model(env, policy, lamb, gamma, bellman_update):
     samples = 1000
     for sample in range(1, samples + 1):
         total_rewards = 0
@@ -159,7 +159,7 @@ def run_model(env, policy, lamb, gamma):
             total_rewards += reward
 
             if done:
-                log('{},{},{}'.format(lamb, sample, total_rewards), 'run', gamma)
+                log('{},{},{}'.format(lamb, sample, total_rewards), bellman_update, 'run', gamma)
                 break
 def train(replay_memory, model, target_model):
 
