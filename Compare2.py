@@ -55,7 +55,7 @@ def run():
     shape = (10, 10)
 
     # Building environment
-    env = RiverCrossingEnv(shape, state_as_img=False)
+    env = RiverCrossingEnv(shape, state_as_img=True)
     agent_type = args.type
 
     h, w = env.shape
