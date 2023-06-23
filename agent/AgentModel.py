@@ -9,6 +9,8 @@ from copy import copy
 from collections import defaultdict
 from collections import deque
 
+import pickle
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -58,6 +60,10 @@ class AgentModel(ABC):
 
     @abstractmethod
     def set_weights(self, model):
+        pass
+
+    @abstractmethod
+    def save_model(self, name):
         pass
 
     @abstractmethod
@@ -131,6 +137,10 @@ class QLearningModel(AgentModel):
         # deep copy Q
         self.Q = copy(model.Q)
 
+    def save_model(self, name):
+        with open(name, 'wb') as fp:
+            pickle.dump(self.Q, fp)
+
     def find_qs(self, state):
         # Q[s]
         return self.Q[state]
@@ -184,6 +194,9 @@ class DQNModel(AgentModel):
 
     def set_weights(self, model):
         self.model.set_weights(model.model.get_weights())
+
+    def save_model(self, name):
+        self.model.save_weights(name)
 
     def find_qs(self, state):
         encoded = self.encode_observation(state)
