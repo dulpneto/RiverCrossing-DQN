@@ -141,25 +141,6 @@ def run():
         target_model.save_model(
             'compare2/models/model_{}_{}_{}_{}.h5'.format(agent_type, bellman_update, lamb, sample))
 
-        for y in range(h):
-            for x in range(w):
-                s = x + (y * w)
-                predicted = model.find_qs(s)
-                action = np.argmax(predicted)
-                policy_stack[s].append(action)
-        #run_model(env, model, lamb, epsilon)
-
-    policy = {}
-    for y in range(h):
-        for x in range(w):
-            s = x + (y * w)
-            a = np.argmax(np.bincount(policy_stack[s]))
-            policy[s] = a
-    print('policy', policy)
-
-
-    run_model(env, policy, lamb, agent_type, bellman_update)
-
 
 def run_model(env, policy, lamb, agent_type, bellman_update):
     samples = 1000
