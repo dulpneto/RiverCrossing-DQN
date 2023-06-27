@@ -17,6 +17,7 @@ class BellmanUpdate(ABC):
         self.gamma = gamma
         self.lamb = lamb
         self.default_V = self.init_default_v()
+        self.max_u = 0
 
     @abstractmethod
     def init_default_v(self):
@@ -92,6 +93,11 @@ class TargetUpdate(BellmanUpdate):
         v = self.safe_max(future_qs)
         target = reward + (self.gamma * v)
         u = self.utility(target)
+
+        if (self.lamb > 0 and u > self.max_u)\
+                or (self.lamb < 0 and u < self.max_u):
+            self.max_u = u
+
         u_q = self.utility(self.safe_q(current_qs, action))
         return self.reverse_utility(u_q + (self.alpha * (u - u_q)))
 
@@ -162,6 +168,7 @@ class TDUpdate(BellmanUpdate):
         self.gamma = gamma
         self.lamb = lamb
         self.default_V = self.init_default_v()
+        self.max_u = 0
         self.y_0 = 0
         self.x_0 = np.sign(self.lamb) * math.exp(self.lamb * self.y_0)
 
@@ -172,6 +179,9 @@ class TDUpdate(BellmanUpdate):
         v = self.safe_max(future_qs)
         td = reward + (self.gamma * v) - self.safe_q(current_qs, action)
         u = self.utility(td)
+        if (self.lamb > 0 and u > self.max_u)\
+                or (self.lamb < 0 and u < self.max_u):
+            self.max_u = u
         return self.safe_q(current_qs, action) + (self.alpha * (u - self.x_0))
 
     def bellman_normalize(self, current_qs):
