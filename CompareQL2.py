@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import sys
 import argparse
 
 import os
@@ -25,19 +26,20 @@ MIN_TRAIN_REWARDS = -5000
 #RUN_FOR = 'ql2'
 RUN_FOR = 'dqn2'
 
-def log(txt, type):
-    with open('./logs/{}/result_{}_2.log'.format(RUN_FOR, type), 'a') as f:
+def log(txt, type, bellman_update, alpha):
+    fpath = './logs/{}/result_alpha_{}_{}.log'.format(RUN_FOR, alpha, type)
+
+    with open(fpath, 'a') as f:
         f.write(txt + '\n')
     print(txt)
 
 
 
-def run(bellman_update):
+def run(bellman_update, env, alpha):
 
     if not os.path.exists('logs/{}'.format(RUN_FOR)):
         os.makedirs('logs/{}'.format(RUN_FOR))
 
-    alpha = 0.1
     gamma = 0.99
 
     epsilon = 0.3  # Epsilon-greedy algorithm in initialized at 1 meaning every step is random at the start
@@ -48,7 +50,7 @@ def run(bellman_update):
     shape = (10, 10)
 
     # Building environment
-    env = RiverCrossingEnv(shape, state_as_img=False)
+    #env = RiverCrossingEnv(shape, state_as_img=False)
     if RUN_FOR == 'ql2':
         agent_type = 'QL'
     else:
@@ -57,14 +59,12 @@ def run(bellman_update):
     h, w = env.shape
 
     #for lamb in [-1.5, -1.0, -0.75, -0.5, -0.2, -0.1, 0.1, 0.2, 0.5, 0.75, 1.0, 1.5]:
-    for lamb in [-0.75, -0.5, -0.2, -0.1, 0.1, 0.2, 0.5, 0.75, 1.0, 1.5]:
+    #for lamb in [-0.2,0.75,1.0]:
     #for lamb in [-1.5, -0.5, 0.5, 1.5]:
-    #for l in range(-15, 16, 1):
-        #lamb = l / 10
 
-        if lamb == 0:
-            print('skip 0')
-            continue
+    samples = 25
+    for sample in range(1, samples + 1):
+
 
         policy_stack = {}
 
@@ -73,8 +73,14 @@ def run(bellman_update):
                 s = x + (y * w)
                 policy_stack[s] = []
 
-        samples = 25
-        for sample in range(1, samples+1):
+
+
+        for l in range(-15, 16, 1):
+            lamb = l / 10
+
+            if lamb == 0:
+                print('skip 0')
+                continue
 
             # 1. Initialize the Target and Main models
             # Main Model (updated every step)
@@ -126,7 +132,7 @@ def run(bellman_update):
                         try:
                             train(replay_memory, model, target_model)
                         except (ValueError, OverflowError):
-                            log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, episode, 1), 'error')
+                            log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, episode, 1), 'error', bellman_update, alpha)
                             error = True
                             break
 
@@ -138,14 +144,20 @@ def run(bellman_update):
                         vs0 = max(predicted)
 
                         if math.isnan(vs0):
-                            log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, episode, 1), 'error')
+                            log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, 1), 'error', bellman_update, alpha)
                             error = True
                             break
 
-                        log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, episode, vs0), 'vso')
-                        log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, episode, model.bellman.max_u), 'us')
-                        log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, episode, total_training_rewards), 'rewards')
+                        log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, vs0), 'vso', bellman_update, alpha)
+                        log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, model.bellman.max_u), 'us', bellman_update, alpha)
+                        log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, model.bellman.min_u), 'us_min',
+                            bellman_update, alpha)
+                        log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, total_training_rewards), 'rewards', bellman_update, alpha)
                         model.bellman.max_u = 0
+                        model.bellman.min_u = sys.maxsize
+
+                        safe_points = model.find_safe_points()
+                        log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, safe_points), 'safe', bellman_update, alpha)
 
                         target_model.set_weights(model)
                         steps_to_update_target_model = 0
@@ -167,9 +179,23 @@ def main():
         # record start time
         t_0 = timeit.default_timer()
 
+        shape = (10, 10)
+
+        # Building environment
+        env = RiverCrossingEnv(shape, state_as_img=False)
+
+
+        alpha = 0.1
+
+        parser = argparse.ArgumentParser(description='Run QL for River Crossing domain.')
+        parser.add_argument('-b', '--bellman_update', default='Target',
+                            help='The type of Bellman update Target, TD or SI, default Target.')
+        args = parser.parse_args()
+
+        bellman_update = args.bellman_update
+
         # running
-        #run('Target')
-        run('TD')
+        run(bellman_update, env, alpha)
 
         # calculate elapsed time and print
         t_1 = timeit.default_timer()

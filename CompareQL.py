@@ -22,14 +22,14 @@ np.random.seed(RANDOM_SEED)
 MIN_TRAIN_REWARDS = -5000
 
 def log(txt, bellman_update, type, gamma):
-    with open('./logs/ql/result_ql_bellman_update_{}_gamma_{}.log'.format(bellman_update, type, gamma), 'a') as f:
+    with open('./logs/ql/result_dqn_bellman_update_{}_gamma_{}_2.log'.format(bellman_update, type, gamma), 'a') as f:
         f.write(txt + '\n')
     print(txt)
 
 
 def run():
     parser = argparse.ArgumentParser(description='Run QL for River Crossing domain.')
-    parser.add_argument('-b', '--bellman_update', default='Target', help='The type of Bellman update Target, TD or LSE, default Target.')
+    parser.add_argument('-b', '--bellman_update', default='TD', help='The type of Bellman update Target, TD or LSE, default Target.')
     args = parser.parse_args()
 
     if not os.path.exists('logs/ql'):
@@ -48,11 +48,11 @@ def run():
 
     # Building environment
     env = RiverCrossingEnv(shape, state_as_img=False)
-    agent_type = 'QL'
+    agent_type = 'DQN_CACHED'
 
     h, w = env.shape
 
-    for lamb in [-5.0, -2.0, -1.0, -0.75, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 2.0, 5.0]:
+    for lamb in [-0.5]:
     #for lamb in [0.0]:
         # if we are working with convolutional network we must return stats as images
         env.state_as_img = agent_type.startswith('DQN_CONV')

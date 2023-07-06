@@ -25,14 +25,14 @@ QUIET = True
 def main():
     # Building environment
     shape = (10, 10)
-    env = RiverCrossingEnv(shape, state_as_img=True, state_img_width=500)
+    env = RiverCrossingEnv(shape, state_as_img=False, state_img_width=500)
 
     #print(env.reset())
 
     #RiverCrossingEnv.draw_img_state(shape, policy=env.safe_policy, state_img_width=500)
     data = ''
     gamma = 0.99
-    for lamb in [-1.0, -0.5, -0.2, -0.1, 0.0, 0.1, 0.2, 0.5, 1.0]:
+    for lamb in [-2.0, -1.0, -0.75, -0.5, -0.2, -0.1, 0.1, 0.2, 0.5, 0.75, 1.0, 2.0]:
         policy, v, steps, updates, diffs, v_history = ValueIteration.run(env, lamb, gamma)
         safe_points = ValueIteration.find_safe_points(env, policy)
         data+='{},'.format(safe_points)
