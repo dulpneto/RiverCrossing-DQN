@@ -392,3 +392,23 @@ class RiverCrossingEnv(gym.Env):
         print(lineAction)
         print('')
         print(lineState)
+
+    def check_proper_policy(self, policy):
+        h, w = self.shape
+        s = self.s0
+        for i in range((2*h)+(2*w)):
+            next_state = self.most_likely_step(s, policy[s])
+            if next_state in self.G:
+                return True
+            s = next_state
+        return False
+
+    def most_likely_step(self, s, a):
+        max_prob = 0
+        selected_next_state = s
+        for s_next, t, r in self.P[(s, a)]:
+            if t > max_prob:
+                max_prob = t
+                selected_next_state = s_next
+        return selected_next_state
+

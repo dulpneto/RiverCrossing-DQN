@@ -23,8 +23,8 @@ np.random.seed(RANDOM_SEED)
 # this is done to avoid being stuck
 MIN_TRAIN_REWARDS = -5000
 
-#RUN_FOR = 'ql2'
-RUN_FOR = 'dqn2'
+RUN_FOR = 'ql2'
+#RUN_FOR = 'dqn2'
 
 def log(txt, type, bellman_update, alpha):
     fpath = './logs/{}/result_alpha_{}_{}.log'.format(RUN_FOR, alpha, type)
@@ -45,7 +45,7 @@ def run(bellman_update, env, alpha):
     epsilon = 0.3  # Epsilon-greedy algorithm in initialized at 1 meaning every step is random at the start
 
     # An episode a full game
-    train_episodes = 150
+    train_episodes = 300
 
     shape = (10, 10)
 
@@ -64,16 +64,6 @@ def run(bellman_update, env, alpha):
 
     samples = 25
     for sample in range(1, samples + 1):
-
-
-        policy_stack = {}
-
-        for y in range(h):
-            for x in range(w):
-                s = x + (y * w)
-                policy_stack[s] = []
-
-
 
         for l in range(-15, 16, 1):
             lamb = l / 10
@@ -94,6 +84,13 @@ def run(bellman_update, env, alpha):
             replay_memory = deque(maxlen=1_000)
 
             steps_to_update_target_model = 0
+
+            policy_stack = {}
+
+            for y in range(h):
+                for x in range(w):
+                    s = x + (y * w)
+                    policy_stack[s] = []
 
             error=False
 
@@ -140,11 +137,20 @@ def run(bellman_update, env, alpha):
                     total_training_rewards += reward
 
                     if done:
+
+                        if episode > train_episodes-50:
+                            for y in range(h):
+                                for x in range(w):
+                                    s = x + (y * w)
+                                    predicted = model.find_qs(s)
+                                    action = np.argmax(predicted)
+                                    policy_stack[s].append(action)
+
                         predicted = model.find_qs(env.s0)
                         vs0 = max(predicted)
 
                         if math.isnan(vs0):
-                            log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, 1), 'error', bellman_update, alpha)
+                            #log('{}\t{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, episode, 1), 'error', bellman_update, alpha)
                             error = True
                             break
 
@@ -162,6 +168,23 @@ def run(bellman_update, env, alpha):
                         target_model.set_weights(model)
                         steps_to_update_target_model = 0
                         break
+
+            if len(policy_stack[env.s0]) > 0:
+                policy = {}
+                for y in range(h):
+                    for x in range(w):
+                        s = x + (y * w)
+                        a = np.argmax(np.bincount(policy_stack[s]))
+                        policy[s] = a
+
+                proper_policy = env.check_proper_policy(policy)
+
+                if proper_policy:
+                    log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, 1), 'proper',
+                        bellman_update, alpha)
+                else:
+                    log('{}\t{}\t{}\t{}'.format(lamb, bellman_update, sample, 1), 'not_proper',
+                        bellman_update, alpha)
 
 def train(replay_memory, model, target_model):
 
@@ -185,17 +208,24 @@ def main():
         env = RiverCrossingEnv(shape, state_as_img=False)
 
 
-        alpha = 0.1
-
         parser = argparse.ArgumentParser(description='Run QL for River Crossing domain.')
         parser.add_argument('-b', '--bellman_update', default='Target',
                             help='The type of Bellman update Target, TD or SI, default Target.')
+
+        parser.add_argument('-a', '--alpha', type=float, default=0.1, help='The learning rate, default to 0.1.')
         args = parser.parse_args()
 
         bellman_update = args.bellman_update
 
+        alpha = args.alpha
+
         # running
-        run(bellman_update, env, alpha)
+        if RUN_FOR == 'ql2':
+            run('Target', env, alpha)
+            run('TD', env, alpha)
+            run('SI', env, alpha)
+        else:
+            run(bellman_update, env, alpha)
 
         # calculate elapsed time and print
         t_1 = timeit.default_timer()
