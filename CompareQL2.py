@@ -23,8 +23,8 @@ np.random.seed(RANDOM_SEED)
 # this is done to avoid being stuck
 MIN_TRAIN_REWARDS = -5000
 
-RUN_FOR = 'ql2'
-#RUN_FOR = 'dqn2'
+#RUN_FOR = 'ql2'
+RUN_FOR = 'dqn2'
 
 def log(txt, type, bellman_update, alpha):
     fpath = './logs/{}/result_alpha_{}_{}.log'.format(RUN_FOR, alpha, type)
