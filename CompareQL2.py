@@ -62,7 +62,7 @@ def run(bellman_update, env, alpha):
     #for lamb in [-0.2,0.75,1.0]:
     #for lamb in [-1.5, -0.5, 0.5, 1.5]:
 
-    samples = 25
+    samples = 15
     for sample in range(1, samples + 1):
 
         for l in range(-15, 16, 1):
@@ -209,10 +209,10 @@ def main():
 
 
         parser = argparse.ArgumentParser(description='Run QL for River Crossing domain.')
-        parser.add_argument('-b', '--bellman_update', default='Target',
+        parser.add_argument('-b', '--bellman_update', default='TD',
                             help='The type of Bellman update Target, TD or SI, default Target.')
 
-        parser.add_argument('-a', '--alpha', type=float, default=0.1, help='The learning rate, default to 0.1.')
+        parser.add_argument('-a', '--alpha', type=float, default=0.4, help='The learning rate, default to 0.1.')
         args = parser.parse_args()
 
         bellman_update = args.bellman_update
@@ -221,9 +221,10 @@ def main():
 
         # running
         if RUN_FOR == 'ql2':
-            run('Target', env, alpha)
-            run('TD', env, alpha)
-            run('SI', env, alpha)
+            #run('Target', env, alpha)
+            #run('TD', env, alpha)
+            #run('SI', env, alpha)
+            run('TD_TRUNC', env, alpha)
         else:
             run(bellman_update, env, alpha)
 

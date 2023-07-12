@@ -54,6 +54,9 @@ class TwoArmedBandit(gym.Env):
         self.P[(1, 0)] = [(1, 1, 0)]
         self.P[(1, 1)] = [(1, 1, 0)]
 
+        # max_abs_r = sup(|r|)
+        self.max_abs_r = max(abs(self.r_0), abs(self.mu - (self.p / 2)), abs(self.mu + (self.p / 2)))
+
         if plot:
             s = np.random.normal(self.mu, self.sigma, 10_000)
             plt.hist(s, bins=50)

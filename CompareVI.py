@@ -44,7 +44,7 @@ def run_vi():
     if not os.path.exists('logs/vi'):
         os.makedirs('logs/vi')
 
-    alpha = 0.01
+    alpha = 0.4
     gamma = 0.99
 
     shape = (10, 10)
@@ -84,6 +84,24 @@ def run_vi():
             print('Error TD alpha {}, lamb {}'.format(alpha, lamb))
 
         try:
+            policy_shen_trunc, V_shen_trunc, steps_shen_trunc, updates_shen_trunc, diffs_shen_trunc, V_history_shen_trunc, utilities_shen_trunc, utilities_min_shen_trunc = ValueIteration.run_td(
+                env, lamb,
+                gamma,
+                alpha,
+            trunc=True)
+
+            safe_points_shen_trunc = ValueIteration.find_safe_points(env, policy_shen_trunc)
+
+            log_list('{}'.format(lamb) + '\tTD_TRUNC\t{}\t{}', 'diffs', diffs_shen_trunc, alpha)
+            log_list_2('{}'.format(lamb) + '\tTD_TRUNC\t{}\t{}', 'vso', V_history_shen_trunc, env.s0, alpha)
+            log_list('{}'.format(lamb) + '\tTD_TRUNC\t{}\t{}', 'us', utilities_shen_trunc, alpha)
+            log_list('{}'.format(lamb) + '\tTD_TRUNC\t{}\t{}', 'us_min', utilities_min_shen_trunc, alpha)
+        except (ValueError, OverflowError):
+            steps_shen_trunc = - 1
+            safe_points_shen_trunc = -1
+            print('Error TD_TRUNC alpha {}, lamb {}'.format(alpha, lamb))
+
+        try:
             policy_soft, V_soft, steps_soft, updates_soft, diffs_soft, V_history_soft, utilities_soft, utilities_min_soft = ValueIteration.run_soft_indicator(
                 env, lamb,
                 gamma,
@@ -101,10 +119,10 @@ def run_vi():
             print('Error TD alpha {}, lamb {}'.format(alpha, lamb))
 
         print('\nRisk {}'.format(lamb))
-        print('\tVI\tTarget\tTD\SI')
-        log('{}\t{}\t{}\t{}\t{}'.format(lamb,0, steps_2, steps_shen, steps_soft), 'steps', alpha)
+        print('\tVI\tTarget\tTD\tSI\tTD_TRUNC')
+        log('{}\t{}\t{}\t{}\t{}\t{}'.format(lamb,0, steps_2, steps_shen, steps_soft, steps_shen_trunc), 'steps', alpha)
 
-        log('{}\t{}\t{}\t{}\t{}'.format(lamb, 0, safe_points_2, safe_points_shen, safe_points_soft), 'safe', alpha)
+        log('{}\t{}\t{}\t{}\t{}\t{}'.format(lamb, 0, safe_points_2, safe_points_shen, safe_points_soft, safe_points_shen_trunc), 'safe', alpha)
 
         log_list('{}'.format(lamb) + '\tTarget\t{}\t{}', 'diffs', diffs_2, alpha)
         log_list_2('{}'.format(lamb) + '\tTarget\t{}\t{}', 'vso', V_history_2, env.s0, alpha)

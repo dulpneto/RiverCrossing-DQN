@@ -5,6 +5,8 @@ from collections import defaultdict
 from copy import deepcopy
 import math
 
+from agent.BellmanUpdate import TDTruncUpdate
+
 
 class ValueIteration:
 
@@ -118,7 +120,7 @@ class ValueIteration:
         return policy, Vu, steps, updates, diffs, V_history, utilities_per_step, utilities_per_step_min
 
     @staticmethod
-    def run_td(env, lamb, gamma, alpha, epsilon=1e-3):
+    def run_td(env, lamb, gamma, alpha, epsilon=1e-3, trunc=False):
         V = np.zeros(env.observation_space.shape[0])
         Q = defaultdict(lambda: np.zeros(env.action_space.n))
         policy = np.zeros(env.observation_space.shape[0])
@@ -128,6 +130,8 @@ class ValueIteration:
         V_history = []
         y_0 = 0
         x_0 = np.sign(lamb) * math.exp(lamb * y_0)
+
+        truc_update = TDTruncUpdate(alpha, gamma, lamb, env.max_abs_r)
 
         utilities_per_step = []
         utilities_per_step_min = []
@@ -149,7 +153,16 @@ class ValueIteration:
                             q_a += t * (r + gamma * V[s_next])
                         else:
                             td = r + (gamma * np.max(prev_Q[s_next])) - prev_Q[s][a]
-                            u = np.sign(lamb) * math.exp(lamb * td)
+
+                            if trunc:
+                                if td <= truc_update.l_x:
+                                    u = truc_update.utility(truc_update.l_x) + (truc_update.const * (td - truc_update.l_x))
+                                elif td >= truc_update.s_x:
+                                    u = truc_update.utility(truc_update.s_x) + (truc_update.const * (td - truc_update.s_x))
+                                else:
+                                    u = truc_update.utility(td)
+                            else:
+                                u = truc_update.utility(td)
                             if r != 0.0:
                                 utilities.append(abs(u))
                             q_a += t * u
@@ -170,6 +183,9 @@ class ValueIteration:
 
             if np.max(np.fabs(prev_V - V)) < epsilon:
                 break
+
+            if steps > 1e4:
+                raise ValueError('Too many steps {}'.format(steps))
         return policy, V, steps, updates, diffs, V_history, utilities_per_step,utilities_per_step_min
 
     @staticmethod

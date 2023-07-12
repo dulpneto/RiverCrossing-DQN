@@ -43,7 +43,8 @@ class RiverCrossingEnv(gym.Env):
         self.G.append(h * w - 1)
         # self.G.append(15)
 
-        self.maxR = 1
+        # we got -1 and 0 max_abs_r = sup(|r|)
+        self.max_abs_r = 1
 
         # defines s0 as the left bottom corner
         if s0 is None:
@@ -255,31 +256,41 @@ class RiverCrossingEnv(gym.Env):
                 matplot_x = x
                 matplot_y = h - y - 1
 
-                if x == w - 1 and y == h - 1:  # meta
-                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='gray'))
+                if w * (h - 1) == s:
+                    #so
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='#aed1a1'))
+                elif x == w - 1 and y == h - 1:  # meta
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='#8e8e8e'))
                     # ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch='+'))
                 elif x == 0:  # margem direita
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='#89bc76'))
                     text = 'D'
                 elif x == w - 1:  # margem esquerda
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='#89bc76'))
                     text = 'E'
                 elif y == 0:  # ponte
                     text = 'B'
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='#aa5519'))
                 elif y == h - 1:  # cachoeira
                     hatch = 'xxxxxx'
                     if img_width >= 5:
                         hatch='xx'
-                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch=hatch))
+                    #ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch=hatch))
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='#0004f8'))
                 else:  # rio
                     hatch = '......'
                     if img_width >= 5:
                         hatch = '..'
-                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch=hatch))
+                    #ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, fill=False, hatch=hatch))
+
+                    ax.add_patch(plt.Rectangle((matplot_x - 0.5, matplot_y - 0.5), 1, 1, facecolor='#3a79ed'))
 
                 # policy was given, must draw arrows
                 if len(policy) > 0:
                     action = policy[s]
-                    u, v = a2uv[action]
-                    ax.arrow(matplot_x - (u * .4), matplot_y + (v * .4), u * .4, -v * .4, color='red', head_width=0.4, head_length=0.4)
+                    if action >= 0:
+                        u, v = a2uv[action]
+                        ax.arrow(matplot_x - (u * .4), matplot_y + (v * .4), u * .4, -v * .4, color='red', head_width=0.4, head_length=0.4)
                 elif s == state:
                     ax.add_patch(plt.Circle((matplot_x, matplot_y), 0.4, facecolor='black'))
 
@@ -297,8 +308,8 @@ class RiverCrossingEnv(gym.Env):
         if not os.path.exists('environment/img'):
             os.makedirs('environment/img')
 
-        if state < 0:
-            state = 'policy'
+        #if state < 0:
+        #    state = 'policy'
 
         plt.savefig('environment/img/river_{}.png'.format(state))
         plt.close()

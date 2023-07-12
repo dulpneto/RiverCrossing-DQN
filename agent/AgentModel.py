@@ -96,7 +96,7 @@ class AgentModel(ABC):
     @staticmethod
     def build(type, bellman_type, env, alpha, gamma, lamb):
 
-        bellman_update = bu.BellmanUpdate.build(bellman_type, alpha, gamma, lamb)
+        bellman_update = bu.BellmanUpdate.build(bellman_type, alpha, gamma, lamb, env.max_abs_r)
 
         if type == AgentType.QL:
             return QLearningModel(env, alpha, gamma, lamb, bellman_update)

@@ -25,11 +25,33 @@ QUIET = True
 def main():
     # Building environment
     shape = (10, 10)
+    h, w = shape
     env = RiverCrossingEnv(shape, state_as_img=False, state_img_width=500)
 
     #print(env.reset())
+    RiverCrossingEnv.draw_img_state(shape, policy=[], state_img_width=500, state=-99)
 
-    #RiverCrossingEnv.draw_img_state(shape, policy=env.safe_policy, state_img_width=500)
+    for safe_steps in range (1,10):
+
+        policy = np.ones(h*w) * -1
+        margin = 90
+        for s in range(safe_steps):
+            policy[margin] = 0
+            margin -= 10
+
+        start = margin
+        for i in range(start,start+9):
+            policy[i] = 2
+
+        margin += 9
+        for s in range(safe_steps):
+            policy[margin] = 1
+            margin += 10
+        RiverCrossingEnv.draw_img_state(shape, policy=policy, state_img_width=500, state=(safe_steps * -1))
+
+    if True:
+        return
+
     data = ''
     gamma = 0.99
     for lamb in [-2.0, -1.0, -0.75, -0.5, -0.2, -0.1, 0.1, 0.2, 0.5, 0.75, 1.0, 2.0]:
